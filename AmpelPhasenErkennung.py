@@ -15,14 +15,19 @@ import Input_Data_Handler as IDH
 #TensorFlow Function Wrapper#######################
 ###################################################
 def weight_variable(shape):
+#creates a TensorFlow variable with given shape and a standard deviation 0.1
   initial = tf.truncated_normal(shape, stddev=0.1)
   return tf.Variable(initial)
 
 def bias_variable(shape):
+# creates a TensorFlow variable with given shape and a fixed value of 0.1
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
 def conv2d(x, W):
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#conv2d
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#convolution
+    #Computes a 2-D convolution given 4-D input and filter tensors.
   return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
 def max_pool_2x2(x):
@@ -43,30 +48,67 @@ def main():
     #TensorFlow Graph definition#######################
     ###################################################
 
+    #A TensorFlow Session for use in interactive contexts, such as a shell.
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/client.html#InteractiveSession
     sess = tf.InteractiveSession()
 
-    #x = tf.placeholder(tf.float32, shape=[None, 2500])
-    x = tf.placeholder(tf.float32)
-    #x = tf.placeholder(tf.float32, shape=[None, 50, 50, 1])
+    #Placeholder
+    #TensorFlow provides a placeholder operation that must be fed with data on execution.
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/io_ops.html#placeholders
+
+    #tf.placeholder(dtype, shape=None, name=None)
+    #dtype: The type of elements in the tensor to be fed.
+    #shape: The shape of the tensor to be fed (optional). If the shape is not specified, you can feed a tensor of any shape.
+    #name: A name for the operation (optional).
+
+    #Placeholder for input batch data shape=[batch_size, NrOfPixel]
+    x = tf.placeholder(tf.float32, shape=[None, 50,50, 1])
+
+    #Placeholder for input labels shape=[batch_size, NrOfClasses]
+    #Each label is a one hot vector: (1,0,0,0) ... (0,0,0,1)
     y_ = tf.placeholder(tf.float32, shape=[None, 4])
 
-    W = tf.Variable(tf.zeros([None,4]))
+    #Variables
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#Variable
+    #Varaibles are Tensors with a fixed shape and initial values
+
+    #tf.Variable(<initial-value>, name=<optional-name>)
+
+    W = tf.Variable(tf.zeros([2500,4]))
     b = tf.Variable(tf.zeros([4]))
 
-
+    #shape for all weight variables for convolution layer 1
     feature_size_x_conv1 = 5
     feature_size_y_conv1 = 5
     nrOfInputChannels_conv1 = 1
     nrOfOutputChannels_conv1 = 32       #Nr of features
+
+    #weight_variable(shape):
     W_conv1 = weight_variable([feature_size_x_conv1, feature_size_y_conv1, nrOfInputChannels_conv1, nrOfOutputChannels_conv1])
+
+    #bias_variable(shape):
+    #creates a TensorFlow variable with
+    #shape = nrOfOutputChannels_conv1
+    #and a fixed value of 0.1
     b_conv1 = bias_variable([nrOfOutputChannels_conv1])
 
-    image_width = 50
-    image_height = 50
-    nrOfColourChannels = 1
-    x_image = tf.reshape(x, [-1, image_width, image_height, nrOfColourChannels])
+    #image_width = 50
+    #image_height = 50
+    #nrOfColourChannels = 1
+    #x_image = tf.reshape(x, [-1, image_width, image_height, nrOfColourChannels])
 
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+    #tf.nn.relu(features, name=None)
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#relu
+    #Computes rectified linear: max(features, 0).
+
+    #Args:
+    #features: A Tensor. Must be one of the following types: float32, float64, int32, int64, uint8, int16, int8, uint16, half.
+    #name: A name for the operation (optional).
+
+    #Returns:
+    #A Tensor. Has the same type as features
+
+    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
     h_pool1 = max_pool_2x2(h_conv1)
 
     #second layer
@@ -113,14 +155,14 @@ def main():
     # TensorFlow Run Graph with feed_dict##############
     ###################################################
     for i in range(20000):
-      batch , labels , errors = myhandler.get_batch(50)
+      batch , labels , errors = myhandler.get_batch(100)
 
       print("Batchsize: {0}".format(str(len(batch))))
       if i%100 == 0:
           train_accuracy = accuracy.eval(feed_dict={
               x: batch, y_: labels, keep_prob: 1.0})
           print("step %d, training accuracy %g" % (i, train_accuracy))
-      train_step.run(feed_dict={x_image: batch, y_: labels, keep_prob: 0.5})
+      train_step.run(feed_dict={x: batch, y_: labels, keep_prob: 0.5})
 
       print("End")
       #print("test accuracy %g"%accuracy.eval(feed_dict={
