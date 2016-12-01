@@ -35,7 +35,7 @@ class InputDataHandler(object):
         fileCnt = 0
         for file in os.listdir(dir_green_greyscales50x50):
             pathToFile = dir_green_greyscales50x50 + "/" + file
-            self.__images_green__.append(cv.imread(pathToFile,1))
+            self.__images_green__.append(cv.imread(pathToFile,cv.IMREAD_GRAYSCALE))
             fileCnt = fileCnt + 1
         print("green filecnt = " + str(fileCnt))
         self.__NrOfGreenSignals__ = fileCnt
@@ -45,7 +45,7 @@ class InputDataHandler(object):
         fileCnt = 0
         for file in os.listdir(dir_yellow_greyscales50x50):
             pathToFile = dir_yellow_greyscales50x50 + "/" + file
-            self.__images_yellow__.append(cv.imread(pathToFile,1))
+            self.__images_yellow__.append(cv.imread(pathToFile,cv.IMREAD_GRAYSCALE))
             fileCnt = fileCnt + 1
         print("yellow filecnt = " + str(fileCnt))
         self.__NrOfYellowSignals__ = fileCnt
@@ -54,7 +54,7 @@ class InputDataHandler(object):
         fileCnt = 0
         for file in os.listdir(dir_red_greyscales50x50):
             pathToFile = dir_red_greyscales50x50 + "/" + file
-            self.__images_red__.append(cv.imread(pathToFile,1))
+            self.__images_red__.append(cv.imread(pathToFile,cv.IMREAD_GRAYSCALE))
             fileCnt = fileCnt + 1
         print("red filecnt = " + str(fileCnt))
         self.__NrOfRedSignals__ = fileCnt
@@ -63,7 +63,7 @@ class InputDataHandler(object):
         fileCnt = 0
         for file in os.listdir(dir_yellowred_greyscales50x50):
             pathToFile = dir_yellowred_greyscales50x50 + "/" + file
-            self.__images_yellowred__.append(cv.imread(pathToFile,1))
+            self.__images_yellowred__.append(cv.imread(pathToFile,cv.IMREAD_GRAYSCALE))
             fileCnt = fileCnt + 1
         print("yellowred filecnt = " + str(fileCnt))
         self.__NrOfYellowRedSignals__ = fileCnt
@@ -147,5 +147,5 @@ class InputDataHandler(object):
             #flattern image matrix
             batch[i] = np.asarray(batch[i])
 
-        print("Green: " + str(greenCnt) + " Yellow: " + str(yellowCnt) + " Red: " + str(redCnt)+ " YellowRed: " + str(yellowRedCnt))
+        #print("Green: " + str(greenCnt) + " Yellow: " + str(yellowCnt) + " Red: " + str(redCnt)+ " YellowRed: " + str(yellowRedCnt))
         return batch , labels, errorcode

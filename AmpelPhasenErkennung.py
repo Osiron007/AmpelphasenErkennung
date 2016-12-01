@@ -8,6 +8,8 @@ import time
 
 import random as rnd
 
+import numpy as np
+
 import Input_Data_Handler as IDH
 
 
@@ -35,6 +37,9 @@ def max_pool_2x2(x):
                         strides=[1, 2, 2, 1], padding='SAME')
 
 def main():
+
+    train = False
+
     ###################################################
     # Input_Data_Handler###############################
     ###################################################
@@ -43,6 +48,7 @@ def main():
     myhandler = IDH.InputDataHandler()
     #read images into Input_Data_Handler
     myhandler.get_images_from_files()
+
 
     ###################################################
     #TensorFlow Graph definition#######################
@@ -62,7 +68,7 @@ def main():
     #name: A name for the operation (optional).
 
     #Placeholder for input batch data shape=[batch_size, NrOfPixel]
-    x = tf.placeholder(tf.float32, shape=[None, 50,50, 1])
+    x = tf.placeholder(tf.float32, shape=[None, 50,50])
 
     #Placeholder for input labels shape=[batch_size, NrOfClasses]
     #Each label is a one hot vector: (1,0,0,0) ... (0,0,0,1)
@@ -92,13 +98,13 @@ def main():
     #and a fixed value of 0.1
     b_conv1 = bias_variable([nrOfOutputChannels_conv1])
 
-    #image_width = 50
-    #image_height = 50
-    #nrOfColourChannels = 1
-    #x_image = tf.reshape(x, [-1, image_width, image_height, nrOfColourChannels])
+    image_width = 50
+    image_height = 50
+    nrOfColourChannels = 1
+    x_image = tf.reshape(x, [-1, image_width, image_height, nrOfColourChannels])
 
     #tf.nn.relu(features, name=None)
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#relu
+    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#relu       h
     #Computes rectified linear: max(features, 0).
 
     #Args:
@@ -108,7 +114,7 @@ def main():
     #Returns:
     #A Tensor. Has the same type as features
 
-    h_conv1 = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
+    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
     h_pool1 = max_pool_2x2(h_conv1)
 
     #second layer
@@ -122,7 +128,7 @@ def main():
     h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
     h_pool2 = max_pool_2x2(h_conv2)
 
-    #densly connected layer
+    #densly (fully) connected layer
     W_fc1 = weight_variable([13 * 13 * 64, 2048])
     b_fc1 = bias_variable([2048])
 
@@ -149,24 +155,54 @@ def main():
 
     sess.run(tf.initialize_all_variables())
 
-    summary_writer = tf.train.SummaryWriter('mylog.log', sess.graph)
+    ###################################################
+    # TensorFlow Saver ################################
+    ###################################################
+
+    # standard implementation
+    saver = tf.train.Saver(max_to_keep=2)
+
+    latest_checkpoint = tf.train.latest_checkpoint("SavedAmpelPhasenCNN")
+
+    # define a global_step for restore process
+    training_step = 0
+
+    if latest_checkpoint != None:
+        print("Letzter Speicherpunkt: " + str(latest_checkpoint))
+        saver.restore(sess, latest_checkpoint)
+        subStrings = latest_checkpoint.split("-")
+        training_step = np.int(subStrings[1]) + 1
+
+    ###################################################
+    # TensorFlow SummeryWriter#########################
+    ###################################################
+
+    #creates a summary of the whole graph and saves it into folder "SavedGraphDefinitions"
+    summary_writer = tf.train.SummaryWriter('SavedGraphDefinitions', sess.graph)
 
     ###################################################
     # TensorFlow Run Graph with feed_dict##############
     ###################################################
-    for i in range(20000):
-      batch , labels , errors = myhandler.get_batch(100)
+    if train == True:
+        for i in range(training_step,20000):
+          batch , labels , errors = myhandler.get_batch(100)
 
-      print("Batchsize: {0}".format(str(len(batch))))
-      if i%100 == 0:
-          train_accuracy = accuracy.eval(feed_dict={
-              x: batch, y_: labels, keep_prob: 1.0})
-          print("step %d, training accuracy %g" % (i, train_accuracy))
-      train_step.run(feed_dict={x: batch, y_: labels, keep_prob: 0.5})
-
-      print("End")
-      #print("test accuracy %g"%accuracy.eval(feed_dict={
-    #    x: mnist.test.images, y_: mnist.test.labels, keep_prob: 1.0}))
+          #print("Batchsize: {0}".format(str(len(batch))))
+          print("Step: %d" % i)
+          if i%100 == 0:
+              train_accuracy = accuracy.eval(feed_dict={
+                  x: batch, y_: labels, keep_prob: 1.0})
+              print("step %d, training accuracy %g" % (i, train_accuracy))
+              saver.save(sess, 'SavedAmpelPhasenCNN/AmpelPhasenCNN', global_step=i)
+          train_step.run(feed_dict={x: batch, y_: labels, keep_prob: 0.5})
+        print("---------FINISHED--------")
+    else:
+        #Evaluation HERE
+        batch1, labels1, errors1 = myhandler.get_batch(1)
+        #feed_dict = {x: [batch1]}
+        classification = y_conv.eval(feed_dict={x: batch1,keep_prob:1.0})
+        print("classification"+str(classification))
+        print("correct label" + str(labels1))
 
 if __name__ == "__main__":
     main()
