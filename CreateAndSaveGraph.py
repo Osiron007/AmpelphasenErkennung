@@ -1,16 +1,6 @@
-import sys
 
 import tensorflow as tf
 
-import cv2 as cv
-
-import time
-
-import random as rnd
-
-import numpy as np
-
-import Input_Data_Handler as IDH
 
 
 ###################################################
@@ -37,15 +27,6 @@ def max_pool_2x2(x):
                         strides=[1, 2, 2, 1], padding='SAME')
 
 def main():
-
-    ###################################################
-    # Input_Data_Handler###############################
-    ###################################################
-
-    #initialize Input_Data_Handler
-    myhandler = IDH.InputDataHandler()
-    #read images into Input_Data_Handler
-    myhandler.get_images_from_files()
 
 
     ###################################################
@@ -153,23 +134,6 @@ def main():
 
     sess.run(tf.initialize_all_variables())
 
-    ###################################################
-    # TensorFlow Saver ################################
-    ###################################################
-
-    # standard implementation
-    saver = tf.train.Saver(max_to_keep=2)
-
-    latest_checkpoint = tf.train.latest_checkpoint("SavedAmpelPhasenCNN")
-
-    # define a global_step for restore process
-    training_step = 0
-
-    if latest_checkpoint != None:
-        print("Letzter Speicherpunkt: " + str(latest_checkpoint))
-        saver.restore(sess, latest_checkpoint)
-        subStrings = latest_checkpoint.split("-")
-        training_step = np.int(subStrings[1]) + 1
 
     ###################################################
     # TensorFlow SummeryWriter#########################
@@ -178,21 +142,16 @@ def main():
     #creates a summary of the whole graph and saves it into folder "SavedGraphDefinitions"
     summary_writer = tf.train.SummaryWriter('SavedGraphDefinitions', sess.graph)
 
-    ###################################################
-    # TensorFlow Run Graph with feed_dict##############
-    ###################################################
-    for i in range(training_step,20000):
-      batch , labels , errors = myhandler.get_batch(100)
 
-      #print("Batchsize: {0}".format(str(len(batch))))
-      print("Step: %d" % i)
-      if i%100 == 0:
-          train_accuracy = accuracy.eval(feed_dict={
-              x: batch, y_: labels, keep_prob: 1.0})
-          print("step %d, training accuracy %g" % (i, train_accuracy))
-          saver.save(sess, 'SavedAmpelPhasenCNN/AmpelPhasenCNN', global_step=i)
-      train_step.run(feed_dict={x: batch, y_: labels, keep_prob: 0.5})
-    print("---------FINISHED--------")
+    ###################################################
+    # TensorFlow export_meta_graph ####################
+    ###################################################
+
+    tf.train.export_meta_graph("MetaGraph/AmpelPhasenErkennungGraph")
+
+
+
+
 
 if __name__ == "__main__":
     main()

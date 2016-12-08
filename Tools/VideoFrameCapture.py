@@ -3,7 +3,7 @@ import cv2 as cv
 
 import time
 
-cap = cv.VideoCapture("Videos/AmpelVid9.avi")
+cap = cv.VideoCapture("/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/Vid_08_12.avi")
 
 frameCnt = 0
 
@@ -14,7 +14,7 @@ while(ret):
 
     #cv.imshow("MyFrame", frame)
     frameCnt = frameCnt + 1
-    cv.imwrite("Bilder/NewData/Frame%d.jpg" % frameCnt, frame)
+    cv.imwrite("/home/dlm/PycharmProjects/AmpelphasenErkennung/Bilder/NewData/Frame%d.jpg" % frameCnt, frame)
 
 
 print("Anz Frames: " + str(frameCnt))
