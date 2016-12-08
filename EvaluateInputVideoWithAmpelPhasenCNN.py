@@ -166,7 +166,7 @@ def main():
     classifyImages = True
 
     # create path
-    path = "/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/AmpelVid8.avi"
+    path = "/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/AmpelVid4.avi"
 
     cap = cv.VideoCapture(path)
 
@@ -207,8 +207,8 @@ def main():
         classification = y_conv.eval(feed_dict={x: batch , keep_prob: 1.0})
         value_green = classification[0][0]
         value_yellow = classification[0][1]
-        value_yellow_red = classification[0][2]
-        value_red = classification[0][3]
+        value_yellow_red = classification[0][3]
+        value_red = classification[0][2]
         #print("classification "+str(classification))
         #print("Green Value " + str(value_green))
         #print("Yellow Value " + str(value_yellow))
