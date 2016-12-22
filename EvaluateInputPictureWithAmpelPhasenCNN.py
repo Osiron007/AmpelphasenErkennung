@@ -178,25 +178,26 @@ def main():
 
     while classifyImages == True:
 
+
+
         #generate rnd number for image selection
-        imageNumber = rnd.randint(1, 1000)
+        imageNumber = rnd.randint(1, 16)
 
         #create path
-        #path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/Frame"
+        path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/Frame"
 
-        path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/grueneAmpel.jpg"
-        #path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/gelbeAmpel.jpg"
-        #path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/roteAmpel.jpg"
-        #pathToFile = path + str(imageNumber) + ".jpg"
+        #pathToFile = "/home/dlm/AmpelPhasen_Bilder/Testbilder/Frame1.jpg"
 
-        #print("File: " + pathToFile)
+        pathToFile = path + str(imageNumber) + ".jpg"
+
+        print("File: " + pathToFile)
 
         ###################################################
         # Read image and convert it########################
         ###################################################
 
 
-        colorImage = cv.imread(path,cv.IMREAD_COLOR)
+        colorImage = cv.imread(pathToFile,cv.IMREAD_COLOR)
 
         #resizedColorImage = cv.resize(colorImage,(500,500), interpolation=cv.INTER_CUBIC)
         resizedColorImage = cv.resize(colorImage, (500, 500), interpolation=cv.INTER_LINEAR)
@@ -253,9 +254,11 @@ def main():
 
         #show picture with classification
         cv.imshow("Real Image", resizedColorImage)
-
+        cv.moveWindow("Real Image", 500, -1000)
 
         cv.waitKey(5000)
+        key = input("Next Picture:")
+
 
         #release images
         cv.destroyAllWindows()
