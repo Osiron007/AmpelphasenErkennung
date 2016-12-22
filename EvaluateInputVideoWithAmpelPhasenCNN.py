@@ -13,124 +13,147 @@ import numpy as np
 import Input_Data_Handler as IDH
 
 
-###################################################
-#TensorFlow Function Wrapper#######################
-###################################################
-def weight_variable(shape):
-#creates a TensorFlow variable with given shape and a standard deviation 0.1
-  initial = tf.truncated_normal(shape, stddev=0.1)
-  return tf.Variable(initial)
 
-def bias_variable(shape):
-# creates a TensorFlow variable with given shape and a fixed value of 0.1
-  initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
-
-def conv2d(x, W):
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#conv2d
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#convolution
-    #Computes a 2-D convolution given 4-D input and filter tensors.
-  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-
-def max_pool_2x2(x):
-  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
-                        strides=[1, 2, 2, 1], padding='SAME')
 
 def main():
+    ###################################################
+    # Input_Data_Handler###############################
+    ###################################################
+
+    # initialize Input_Data_Handler
+    myhandler = IDH.InputDataHandler()
+    # read images into Input_Data_Handler
+    # myhandler.get_images_from_files()
+
 
     ###################################################
-    #TensorFlow Graph definition#######################
+    # TensorFlow Graph definition#######################
     ###################################################
 
-    #A TensorFlow Session for use in interactive contexts, such as a shell.
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/client.html#InteractiveSession
+    # A TensorFlow Session for use in interactive contexts, such as a shell.
+    # https://www.tensorflow.org/versions/r0.11/api_docs/python/client.html#InteractiveSession
     sess = tf.InteractiveSession()
 
-    #Placeholder
-    #TensorFlow provides a placeholder operation that must be fed with data on execution.
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/io_ops.html#placeholders
+    # Placeholder
+    # TensorFlow provides a placeholder operation that must be fed with data on execution.
+    # https://www.tensorflow.org/versions/r0.11/api_docs/python/io_ops.html#placeholders
 
-    #tf.placeholder(dtype, shape=None, name=None)
-    #dtype: The type of elements in the tensor to be fed.
-    #shape: The shape of the tensor to be fed (optional). If the shape is not specified, you can feed a tensor of any shape.
-    #name: A name for the operation (optional).
+    # tf.placeholder(dtype, shape=None, name=None)
+    # dtype: The type of elements in the tensor to be fed.
+    # shape: The shape of the tensor to be fed (optional). If the shape is not specified, you can feed a tensor of any shape.
+    # name: A name for the operation (optional).
 
-    #Placeholder for input batch data shape=[batch_size, NrOfPixel]
-    #x = tf.placeholder(tf.float32, shape=[None, 50,50])
-    x = tf.placeholder(tf.float32, shape=[None, 50, 50])
+    # Placeholder for input batch data shape=[batch_size, NrOfPixel height, NrOfPixel weight, color channels]
+    x = tf.placeholder(tf.float32, shape=[None, 50, 50, 3])
 
-    #Placeholder for input labels shape=[batch_size, NrOfClasses]
-    #Each label is a one hot vector: (1,0,0,0) ... (0,0,0,1)
+    # Placeholder for input labels shape=[batch_size, NrOfClasses]
+    # Each label is a one hot vector: (1,0,0,0) ... (0,0,0,1)
     y_ = tf.placeholder(tf.float32, shape=[None, 4])
-
-    #Variables
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/state_ops.html#Variable
-    #Varaibles are Tensors with a fixed shape and initial values
-
-    #tf.Variable(<initial-value>, name=<optional-name>)
-
-    W = tf.Variable(tf.zeros([2500,4]))
-    b = tf.Variable(tf.zeros([4]))
-
-    #shape for all weight variables for convolution layer 1
-    feature_size_x_conv1 = 5
-    feature_size_y_conv1 = 5
-    nrOfInputChannels_conv1 = 1
-    nrOfOutputChannels_conv1 = 32       #Nr of features
-
-    #weight_variable(shape):
-    W_conv1 = weight_variable([feature_size_x_conv1, feature_size_y_conv1, nrOfInputChannels_conv1, nrOfOutputChannels_conv1])
-
-    #bias_variable(shape):
-    #creates a TensorFlow variable with
-    #shape = nrOfOutputChannels_conv1
-    #and a fixed value of 0.1
-    b_conv1 = bias_variable([nrOfOutputChannels_conv1])
 
     image_width = 50
     image_height = 50
-    nrOfColourChannels = 1
+    nrOfColourChannels = 3
     x_image = tf.reshape(x, [-1, image_width, image_height, nrOfColourChannels])
 
-    #tf.nn.relu(features, name=None)
-    #https://www.tensorflow.org/versions/r0.11/api_docs/python/nn.html#relu       h
-    #Computes rectified linear: max(features, 0).
+    ###############First Convolution#################
+    filter_height_conv1 = 5
+    filter_width_conv1 = 5
+    number_of_filters = 8
+    number_of_channels = 3
+    # to learn our features we need a variable for each pixel in each filter which will optimized during training
+    filter_conv1 = tf.Variable(
+        tf.truncated_normal([filter_height_conv1, filter_width_conv1, number_of_channels, number_of_filters],
+                            stddev=0.1))
 
-    #Args:
-    #features: A Tensor. Must be one of the following types: float32, float64, int32, int64, uint8, int16, int8, uint16, half.
-    #name: A name for the operation (optional).
+    # for each filter we need a bias variable which can be optimizied during training
+    filter_bias_conv1 = tf.Variable(tf.constant(0.1, shape=[number_of_filters * number_of_channels]))
 
-    #Returns:
-    #A Tensor. Has the same type as features
+    ##### Convolution with tf.nn.conv2d ######################################################################
+    # with this convolution layer we want to convolute out input image with a number of filters
+    # the output will be multiple pictures, one for each filter
 
-    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
-    h_pool1 = max_pool_2x2(h_conv1)
+    # input tensor of shape [batch, in_height, in_width, in_channels]
+    # filter / kernel tensor of shape [filter_height, filter_width, in_channels, out_channels]
+    # strides: A list of ints. 1-D of length 4.
+    #          The stride of the sliding window for each dimension of input.
+    #          Must be in the same order as the dimension specified with format.
+    # padding: A string from: "SAME", "VALID". The type of padding algorithm to use.
+    # Returns: A Tensor. Has the same type as input
+    # -> conv1 = tf.nn.conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
+    ###########################################################################################################
 
-    #second layer
-    feature_size_x_conv2 = 5
-    feature_size_y_conv2 = 5
-    nrOfInputChannels_conv2 = 32
-    nrOfOutputChannels_conv2 = 64  # Nr of features
-    W_conv2 = weight_variable([feature_size_x_conv2, feature_size_y_conv2, nrOfInputChannels_conv2, nrOfOutputChannels_conv2])
-    b_conv2 = bias_variable([nrOfOutputChannels_conv2])
+    #######ACHTUNG NEUER Convolution Alg##################
 
-    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
-    h_pool2 = max_pool_2x2(h_conv2)
+    ##### Convolution with tf.nn.depthwise_conv2d #############################################################
+    # tf.nn.depthwise_conv2d(input, filter, strides, padding, name=None)
+    # Args:
+    # input: 4-D with shape [batch, in_height, in_width, in_channels].
+    # filter: 4-D with shape [filter_height, filter_width, in_channels, channel_multiplier].
+    # strides: 1-D of size 4. The stride of the sliding window for each dimension of input.
+    # padding: A string, either 'VALID' or 'SAME'. The padding algorithm. See the comment here
+    # name: A name for this operation (optional).
 
-    #densly (fully) connected layer
-    W_fc1 = weight_variable([13 * 13 * 64, 2048])
-    b_fc1 = bias_variable([2048])
+    # Returns:
+    # A 4D Tensor of shape[batch, out_height, out_width, in_channels * channel_multiplier].
 
-    h_pool2_flat = tf.reshape(h_pool2, [-1, 13 * 13 * 64])
+    conv1 = tf.nn.depthwise_conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
+    ###########################################################################################################
+
+    # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
+    relu_conv1 = tf.nn.relu(conv1 + filter_bias_conv1)
+
+    # to reduce the pixels in our image we maxpool
+
+    maxpool_conv1 = tf.nn.max_pool(relu_conv1, ksize=[1, 3, 3, 1], strides=[1, 3, 3, 1], padding='SAME')
+
+    ###############Second Convolution#################
+    filter_height_conv2 = 3
+    filter_width_conv2 = 3
+    number_of_filters_conv2 = 5
+    number_of_channels_conv2 = 24  # 3*8
+    # to learn our features we need a variable for each pixel in each filter which will optimized during training
+    filter_conv2 = tf.Variable(
+        tf.truncated_normal(
+            [filter_height_conv2, filter_width_conv2, number_of_channels_conv2, number_of_filters_conv2],
+            stddev=0.1))
+
+    # for each filter we need a bias variable which can be optimizied during training
+    filter_bias_conv2 = tf.Variable(tf.constant(0.1, shape=[number_of_filters_conv2 * number_of_channels_conv2]))
+
+    # with this convolution layer we want to convolute out input image with a number of filters
+    # the output will be multiple pictures, one for each filter
+    # conv2 = tf.nn.conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+    conv2 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+
+    # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
+    relu_conv2 = tf.nn.relu(conv2 + filter_bias_conv2)
+
+    # to reduce the pixels in our image we maxpool => this is to ignore unimportant pixels
+    maxpool_conv2 = tf.nn.max_pool(relu_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+    ###############Fully Connected NN######################
+
+    # create a weight and a bias for each Neuron
+    nrOfInputNeurons = 9720  # 27040
+    nrOfOutputPixels = 9 * 9 * number_of_filters * number_of_filters_conv2 * 3  # 9720
+    W_fc1 = tf.Variable(tf.truncated_normal([nrOfOutputPixels, nrOfInputNeurons], stddev=0.1))
+    b_fc1 = tf.Variable(tf.constant(0.1, shape=[nrOfInputNeurons]))
+
+    # flattern out input images
+    h_pool2_flat = tf.reshape(maxpool_conv2, [-1, nrOfOutputPixels])
+
+    # do the matrix multiplication
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-    #dropout
+    # dropout
     keep_prob = tf.placeholder(tf.float32)
     h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
-    #read out layer
-    W_fc2 = weight_variable([2048, 4])
-    b_fc2 = bias_variable([4])
+    # read out layer
+    W_fc2 = tf.Variable(tf.truncated_normal([nrOfInputNeurons, 4], stddev=0.1))
+    b_fc2 = tf.Variable(tf.constant(0.1, shape=[4]))
+
+    ################################END###########################################################
 
     y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
@@ -143,7 +166,7 @@ def main():
     # standard implementation
     saver = tf.train.Saver(max_to_keep=2)
 
-    latest_checkpoint = tf.train.latest_checkpoint("SavedAmpelPhasenCNN")
+    latest_checkpoint = tf.train.latest_checkpoint("SavedCNN_Color")
 
     saver.restore(sess, latest_checkpoint)
 
@@ -158,22 +181,25 @@ def main():
     # Read classification indicator####################
     ###################################################
 
-    image_green = cv.imread("/home/dlm/AmpelPhasen_Bilder/green_mini.png", 1)
-    image_yellow = cv.imread("/home/dlm/AmpelPhasen_Bilder/yellow_mini.png", 1)
-    image_yellow_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/yellow_red_mini.png", 1)
-    image_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/red_mini.png", 1)
+    image_green = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/green_mini.png", 1)
+    image_yellow = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/yellow_mini.png", 1)
+    image_yellow_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/yellow_red_mini.png", 1)
+    image_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/red_mini.png", 1)
 
     classifyImages = True
 
     # create path
-    path = "/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/AmpelVid4.avi"
+    #path = "/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/AmpelVid6.avi"
+    path = "/home/dlm/PycharmProjects/AmpelphasenErkennung/Videos/Vid_08_12.avi"
+
+
 
     cap = cv.VideoCapture(path)
 
     frameCnt = 0
 
     ret = True
-
+    key = input("Waiting to Start")
     while ret == True:
 
         ###################################################
@@ -189,9 +215,9 @@ def main():
         #resizedColorImage = cv.resize(colorImage,(500,500), interpolation=cv.INTER_CUBIC)
         resizedColorImage = cv.resize(colorImage, (500, 500), interpolation=cv.INTER_LINEAR)
 
-        greyscaleImage = cv.cvtColor(colorImage,cv.COLOR_BGR2GRAY)
+        #greyscaleImage = cv.cvtColor(colorImage,cv.COLOR_BGR2GRAY)
 
-        resizedImage = cv.resize(greyscaleImage,(50,50), interpolation=cv.INTER_CUBIC)
+        resizedImage = cv.resize(resizedColorImage,(50,50), interpolation=cv.INTER_CUBIC)
 
         batch = []
 
@@ -251,7 +277,7 @@ def main():
         #del resizedColorImage
         del classificationImage
         del resizedColorImage
-        del greyscaleImage
+        #del greyscaleImage
         del batch
         del classification
 
