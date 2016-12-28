@@ -15,6 +15,20 @@ import Input_Data_Handler as IDH
 
 def main():
     ###################################################
+    # Configuration####################################
+    ###################################################
+
+    folder_with_latest_checkpoint = "SavedCNN_Color"
+
+    path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/"
+
+    picture_name = "Frame"
+
+    path_to_mini_pictures = "/home/dlm/AmpelPhasen_Bilder/minipics/"
+
+    max_nr_of_pictures = 45
+
+    ###################################################
     # TensorFlow Graph definition#######################
     ###################################################
 
@@ -46,15 +60,15 @@ def main():
     ###############First Convolution#################
     filter_height_conv1 = 5
     filter_width_conv1 = 5
-    number_of_filters = 8
-    number_of_channels = 3
+    number_of_in_channels_conv1 = 3
+    number_of_out_channels_conv1 = 10
     # to learn our features we need a variable for each pixel in each filter which will optimized during training
-    filter_conv1 = tf.Variable(
-        tf.truncated_normal([filter_height_conv1, filter_width_conv1, number_of_channels, number_of_filters],
-                            stddev=0.1))
+    filter_conv1 = tf.Variable(tf.truncated_normal(
+        [filter_height_conv1, filter_width_conv1, number_of_in_channels_conv1, number_of_out_channels_conv1],
+        stddev=0.1))
 
     # for each filter we need a bias variable which can be optimizied during training
-    filter_bias_conv1 = tf.Variable(tf.constant(0.1, shape=[number_of_filters * number_of_channels]))
+    filter_bias_conv1 = tf.Variable(tf.constant(0.1, shape=[number_of_out_channels_conv1]))
 
     ##### Convolution with tf.nn.conv2d ######################################################################
     # with this convolution layer we want to convolute out input image with a number of filters
@@ -67,7 +81,7 @@ def main():
     #          Must be in the same order as the dimension specified with format.
     # padding: A string from: "SAME", "VALID". The type of padding algorithm to use.
     # Returns: A Tensor. Has the same type as input
-    # -> conv1 = tf.nn.conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
+    conv1 = tf.nn.conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
     ###########################################################################################################
 
     #######ACHTUNG NEUER Convolution Alg##################
@@ -84,7 +98,7 @@ def main():
     # Returns:
     # A 4D Tensor of shape[batch, out_height, out_width, in_channels * channel_multiplier].
 
-    conv1 = tf.nn.depthwise_conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
+    # ----> conv1 = tf.nn.depthwise_conv2d(x_image, filter_conv1, strides=[1, 1, 1, 1], padding='SAME')
     ###########################################################################################################
 
     # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
@@ -92,26 +106,26 @@ def main():
 
     # to reduce the pixels in our image we maxpool
 
-    maxpool_conv1 = tf.nn.max_pool(relu_conv1, ksize=[1, 3, 3, 1], strides=[1, 3, 3, 1], padding='SAME')
+    maxpool_conv1 = tf.nn.max_pool(relu_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     ###############Second Convolution#################
     filter_height_conv2 = 3
     filter_width_conv2 = 3
-    number_of_filters_conv2 = 5
-    number_of_channels_conv2 = 24  # 3*8
+    number_of_in_channels_conv2 = 10
+    number_of_out_channels_conv2 = 30
     # to learn our features we need a variable for each pixel in each filter which will optimized during training
     filter_conv2 = tf.Variable(
         tf.truncated_normal(
-            [filter_height_conv2, filter_width_conv2, number_of_channels_conv2, number_of_filters_conv2],
+            [filter_height_conv2, filter_width_conv2, number_of_in_channels_conv2, number_of_out_channels_conv2],
             stddev=0.1))
 
     # for each filter we need a bias variable which can be optimizied during training
-    filter_bias_conv2 = tf.Variable(tf.constant(0.1, shape=[number_of_filters_conv2 * number_of_channels_conv2]))
+    filter_bias_conv2 = tf.Variable(tf.constant(0.1, shape=[number_of_out_channels_conv2]))
 
     # with this convolution layer we want to convolute out input image with a number of filters
     # the output will be multiple pictures, one for each filter
-    # conv2 = tf.nn.conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
-    conv2 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+    conv2 = tf.nn.conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+    # conv2 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
 
     # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
     relu_conv2 = tf.nn.relu(conv2 + filter_bias_conv2)
@@ -119,16 +133,85 @@ def main():
     # to reduce the pixels in our image we maxpool => this is to ignore unimportant pixels
     maxpool_conv2 = tf.nn.max_pool(relu_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
+    ###############Third Convolution#################
+    filter_height_conv3 = 3
+    filter_width_conv3 = 3
+    number_of_in_channels_conv3 = 30
+    number_of_out_channels_conv3 = 80
+    # to learn our features we need a variable for each pixel in each filter which will optimized during training
+    filter_conv3 = tf.Variable(
+        tf.truncated_normal(
+            [filter_height_conv3, filter_width_conv3, number_of_in_channels_conv3, number_of_out_channels_conv3],
+            stddev=0.1))
+
+    # for each filter we need a bias variable which can be optimizied during training
+    filter_bias_conv3 = tf.Variable(tf.constant(0.1, shape=[number_of_out_channels_conv3]))
+
+    # with this convolution layer we want to convolute out input image with a number of filters
+    # the output will be multiple pictures, one for each filter
+    conv3 = tf.nn.conv2d(maxpool_conv2, filter_conv3, strides=[1, 1, 1, 1], padding='SAME')
+    # conv3 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+
+    # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
+    relu_conv3 = tf.nn.relu(conv3 + filter_bias_conv3)
+
+    ###############Fourth Convolution#################
+    filter_height_conv4 = 3
+    filter_width_conv4 = 3
+    number_of_in_channels_conv4 = 80
+    number_of_out_channels_conv4 = 150
+    # to learn our features we need a variable for each pixel in each filter which will optimized during training
+    filter_conv4 = tf.Variable(
+        tf.truncated_normal(
+            [filter_height_conv4, filter_width_conv4, number_of_in_channels_conv4, number_of_out_channels_conv4],
+            stddev=0.1))
+
+    # for each filter we need a bias variable which can be optimizied during training
+    filter_bias_conv4 = tf.Variable(tf.constant(0.1, shape=[number_of_out_channels_conv4]))
+
+    # with this convolution layer we want to convolute out input image with a number of filters
+    # the output will be multiple pictures, one for each filter
+    conv4 = tf.nn.conv2d(relu_conv3, filter_conv4, strides=[1, 1, 1, 1], padding='SAME')
+    # conv3 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+
+    # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
+    relu_conv4 = tf.nn.relu(conv4 + filter_bias_conv4)
+
+    ###############Fifth Convolution#################
+    filter_height_conv5 = 3
+    filter_width_conv5 = 3
+    number_of_in_channels_conv5 = 150
+    number_of_out_channels_conv5 = 200
+    # to learn our features we need a variable for each pixel in each filter which will optimized during training
+    filter_conv5 = tf.Variable(
+        tf.truncated_normal(
+            [filter_height_conv5, filter_width_conv5, number_of_in_channels_conv5, number_of_out_channels_conv5],
+            stddev=0.1))
+
+    # for each filter we need a bias variable which can be optimizied during training
+    filter_bias_conv5 = tf.Variable(tf.constant(0.1, shape=[number_of_out_channels_conv5]))
+
+    # with this convolution layer we want to convolute out input image with a number of filters
+    # the output will be multiple pictures, one for each filter
+    conv5 = tf.nn.conv2d(relu_conv4, filter_conv5, strides=[1, 1, 1, 1], padding='SAME')
+    # conv3 = tf.nn.depthwise_conv2d(maxpool_conv1, filter_conv2, strides=[1, 1, 1, 1], padding='SAME')
+
+    # to avoid negative numbers in our matrices we set each value < 0 to 0 with the relu operation
+    relu_conv5 = tf.nn.relu(conv5 + filter_bias_conv5)
+
+    # to reduce the pixels in our image we maxpool => this is to ignore unimportant pixels
+    maxpool_conv5 = tf.nn.max_pool(relu_conv5, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     ###############Fully Connected NN######################
 
     # create a weight and a bias for each Neuron
-    nrOfInputNeurons = 9720  # 27040
-    nrOfOutputPixels = 9 * 9 * number_of_filters * number_of_filters_conv2 * 3  # 9720
+    nrOfInputNeurons = 9800  # 27040
+    nrOfOutputPixels = 7 * 7 * number_of_out_channels_conv5  # 9800
     W_fc1 = tf.Variable(tf.truncated_normal([nrOfOutputPixels, nrOfInputNeurons], stddev=0.1))
     b_fc1 = tf.Variable(tf.constant(0.1, shape=[nrOfInputNeurons]))
 
     # flattern out input images
-    h_pool2_flat = tf.reshape(maxpool_conv2, [-1, nrOfOutputPixels])
+    h_pool2_flat = tf.reshape(maxpool_conv5, [-1, nrOfOutputPixels])
 
     # do the matrix multiplication
     h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
@@ -154,41 +237,23 @@ def main():
     # standard implementation
     saver = tf.train.Saver(max_to_keep=2)
 
-    latest_checkpoint = tf.train.latest_checkpoint("SavedCNN_Color")
+    latest_checkpoint = tf.train.latest_checkpoint(folder_with_latest_checkpoint)
 
     saver.restore(sess, latest_checkpoint)
 
-    ###################################################
-    # TensorFlow SummeryWriter#########################
-    ###################################################
-
-    #creates a summary of the whole graph and saves it into folder "SavedGraphDefinitions"
-    summary_writer = tf.train.SummaryWriter('SavedGraphDefinitions', sess.graph)
 
     ###################################################
     # Read classification indicator####################
     ###################################################
 
-    image_green = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/green_mini.png", 1)
-    image_yellow = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/yellow_mini.png", 1)
-    image_yellow_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/yellow_red_mini.png", 1)
-    image_red = cv.imread("/home/dlm/AmpelPhasen_Bilder/minipics/red_mini.png", 1)
+    image_green = cv.imread(path_to_mini_pictures + "green_mini.png", 1)
+    image_yellow = cv.imread(path_to_mini_pictures + "yellow_mini.png", 1)
+    image_yellow_red = cv.imread(path_to_mini_pictures + "yellow_red_mini.png", 1)
+    image_red = cv.imread(path_to_mini_pictures + "red_mini.png", 1)
 
-    classifyImages = True
+    for ImageCounter in range(1,max_nr_of_pictures+1):
 
-    while classifyImages == True:
-
-
-
-        #generate rnd number for image selection
-        imageNumber = rnd.randint(1, 16)
-
-        #create path
-        path = "/home/dlm/AmpelPhasen_Bilder/Testbilder/Frame"
-
-        #pathToFile = "/home/dlm/AmpelPhasen_Bilder/Testbilder/Frame1.jpg"
-
-        pathToFile = path + str(imageNumber) + ".jpg"
+        pathToFile = path + picture_name + str(ImageCounter) + ".jpg"
 
         print("File: " + pathToFile)
 
@@ -253,12 +318,10 @@ def main():
 
 
         #show picture with classification
-        cv.imshow("Real Image", resizedColorImage)
-        cv.moveWindow("Real Image", 500, -1000)
+        cv.imshow(picture_name + str(ImageCounter), resizedColorImage)
+        cv.moveWindow(picture_name + str(ImageCounter), 500, -1000)
 
-        cv.waitKey(5000)
-        key = input("Next Picture:")
-
+        cv.waitKey(2000)
 
         #release images
         cv.destroyAllWindows()
